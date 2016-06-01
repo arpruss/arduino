@@ -12,20 +12,32 @@ GNU General Public License for more details.
 You should have received a copy of the GNU General Public License
 along with this program.  If not, see <http://www.gnu.org/licenses/>. */
 
-volatile int value = 0;
+static volatile unsigned int value = 0;
+static char skipSetupPin;
+
+void setSkipSetupPin(char v) {
+  skipSetupPin = v;  
+  if (! v) {
+    pinMode(SETUP_PIN, OUTPUT);
+    digitalWrite(SETUP_PIN, LOW);
+  }
+}
 
 void clear() {
   for (char i = 0 ; i < NUM_LEDS ; i++) {
-    digitalWrite(leds[i], LOW);
+    if (!skipSetupPin || leds[i] != SETUP_PIN)
+      digitalWrite(leds[i], LOW);
   }
 }
 
 void display() {
-  for (char i = 0 ; i < NUM_LEDS ; i++) {
-    if (value & (1<<i))
-      digitalWrite(leds[i], HIGH);
-    else 
-      digitalWrite(leds[i], LOW);
+  for (int i = 0 ; i < NUM_LEDS ; i++) {
+    if (!skipSetupPin || leds[i] != SETUP_PIN) {
+      if (value & (1<<i))
+        digitalWrite(leds[i], HIGH);
+      else 
+        digitalWrite(leds[i], LOW);
+    }
   }
 }
 
@@ -47,21 +59,27 @@ void clearDigits() {
 // Twirler handler.
 Ticker ticker;
 
-volatile char busyValue;
+volatile unsigned int busyValue;
 
-void displayBusy(char digit) {
-  busyValue = 1;
+void displayBusy() {
+  busyValue = 2;
   ticker.attach(0.1, _displayBusy);
 }
 
 void stopDisplayBusy() {
   ticker.detach();
+  clear();
+}
+
+void stopDisplayAP() {
+  ticker.detach();
+  clear();
 }
 
 void _displayBusy() {
   busyValue = (busyValue << 1) & 0x3FF;
   if (busyValue == 0)
-      busyValue = 1;
+      busyValue = 2;
   value = busyValue;
   display();
 }
@@ -69,28 +87,21 @@ void _displayBusy() {
 // End twirler handler.
 
 // IP Display handler.
-volatile signed char dispOctet = -1;
+static volatile uint16_t dispOctet = 0;
 
-char displayIP() {
-  if (dispOctet > -1) {
-    return 1;
-  }
-  if (digitalRead(SETUP_PIN) == 1) return 0;
+void displayIP() {
   dispOctet = 0;
-  ticker.attach(1.0, _displayIP);
-  return 0;
+  ticker.attach(4.0, _displayIP);
 }
 
 void _displayIP() {
   if (dispOctet > 3) {
-    ticker.detach();
-    dispOctet = -1;
-    clockMode == MODE_CLOCK ? displayClock() : displayAP();
-    return;
+    dispOctet = 0;
   }
-  clearDigits();
-  uint8_t octet = (uint32_t(clockMode == MODE_CLOCK ? WiFi.localIP() : WiFi.softAPIP()) >> (8 * dispOctet++)) & 0xff;
-  value = octet;
+
+  uint8_t octet = ( WiFi.softAPIP() >> (8 * dispOctet)) & 0xff;
+  value = octet | (dispOctet<<8);
+  dispOctet++;
   display();
 }
 
@@ -109,7 +120,8 @@ void displayClock() {
 
 void setupDisplay() {
   for (char i=0; i < NUM_LEDS; i++)
-    pinMode(leds[i], OUTPUT);
+    if (!skipSetupPin || leds[i] != SETUP_PIN)
+      pinMode(leds[i], OUTPUT);
   displayDash();
 }
 

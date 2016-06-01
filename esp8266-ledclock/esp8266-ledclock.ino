@@ -27,17 +27,15 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>. */
 #include "mainPage.h"
 #include "clock.h"
 
-#define SETUP_PIN 3
-
 #define MODE_SETUP 0
 #define MODE_CLOCK 1
-int clockMode;
 
 ESP8266WebServer server (80);
 
 String httpUpdateResponse;
 
 time_t prevDisplay = 0;
+char apMode = 0;
 
 void handleRoot() {
   String s = MAIN_page;
@@ -94,42 +92,47 @@ void handleForm() {
 }
 
 void setup() {
+  DebugStart();
   setupDisplay();
-  pinMode(SETUP_PIN, INPUT);
-  digitalWrite(SETUP_PIN, HIGH);
   setupWiFi();
   setupTime();
   server.on("/", handleRoot);
   server.on("/form", handleForm);
   server.begin();
+  setSkipSetupPin(0);
 }
 
 void loop() {
   server.handleClient();
-  if (displayIP()) return;
-  if (clockMode == MODE_CLOCK) {
-    if (timeStatus() != timeNotSet) {
-      if (now() != prevDisplay) { //update the display only if time has changed
-        prevDisplay = now();
-        displayClock();
-      }
+  if (timeStatus() != timeNotSet && ! apMode) {
+    if (now() != prevDisplay) { //update the display only if time has changed
+      prevDisplay = now();
+      displayClock();
     }
   }
 }
 
 void setupWiFi() {
+  setSkipSetupPin(1);
+  pinMode(SETUP_PIN, INPUT);
+  digitalWrite(SETUP_PIN, LOW);
   settings.Load();
-  // Wait up to 5s for GPIO0 to go low to enter AP/setup mode.
-  displayBusy(0);
+  // Wait up to 5s for SETUP_PIN to go low to enter AP/setup mode.
+  displayBusy();
   while (millis() < 5000) {
-    if (digitalRead(SETUP_PIN) == 0 || !settings.ssid.length()) {
+    if (!digitalRead(SETUP_PIN) || !settings.ssid.length()) {
+      DebugLn("Setting up AP");
       stopDisplayBusy();
-      return setupAP();
+      setSkipSetupPin(0);
+      setupAP();
+      DebugLn("Done with AP");
+      return;
     }
     delay(50);
   }
   stopDisplayBusy();
   setupSTA();
+  setSkipSetupPin(0);
 }
 
 void setupSTA()
@@ -138,9 +141,8 @@ void setupSTA()
   char psk[64];
   memset(ssid, 0, 32);
   memset(psk, 0, 64);
-  displayBusy(1);
+  displayBusy();
 
-  clockMode = MODE_CLOCK;
   WiFi.mode(WIFI_STA);
   settings.ssid.toCharArray(ssid, 32);
   settings.psk.toCharArray(psk, 64);
@@ -158,9 +160,9 @@ void setupSTA()
 }
 
 void setupAP() {
-  clockMode = MODE_SETUP;
+  apMode = 1;
   WiFi.mode(WIFI_AP);
   WiFi.softAP(WIFI_AP_NAME);
-  displayAP();
+  displayIP();
 }
 

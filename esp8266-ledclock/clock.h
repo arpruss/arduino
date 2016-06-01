@@ -15,6 +15,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>. */
 #ifndef _CLOCK_H
 #define _CLOCK_H
 
+#undef DEBUG
 
 void setupWiFi(void);
 void setupSTA(void);
@@ -24,13 +25,13 @@ time_t getNtpTime(void);
 void sendNTPpacket(WiFiUDP *u);
 void _displayBusy(void);
 void _displayIP(void);
-char displayIP(void);
-void displayAP(void);
+void displayIP(void);
 void displayDash(void);
 void stopDisplayBusy(void);
 void displayClock(void);
 void setupTime(void);
-void displayBusy(char digit);
+void displayBusy(void);
+void setSkipSetupPin(char value);
 
 #define SECS_PER_HOUR 3600
 extern time_t timeOffset = -1;
@@ -48,9 +49,21 @@ extern char currentStatus = timeNotSet;
 #define setSyncProvider(provider)
 #define setSyncInterval(interval)
 
-extern char leds[] = { 16, 5, 4, 2, 14, 12, 13, 15, 3, 1 };
-#define NUM_LEDS  (sizeof leds/sizeof *leds)
+#ifndef DEBUG
+extern const char leds[] = { 16, 5, 4, 2, 14, 12, 13, 15, 3, 1 };
+#define DebugStart()
+#define DebugLn(s)
+#define Debug(s)
 
+#else
+extern const char leds[] = { 16, 5, 4, 2, 14, 12, 13, 15 };
+#define DebugStart() Serial.begin(115200)
+#define DebugLn(s) Serial.println(s)
+#define Debug(s) Serial.print(s)
+#endif
+
+#define NUM_LEDS  (sizeof leds / sizeof *leds)
+#define SETUP_PIN 0
 
 #endif
 
