@@ -11,6 +11,7 @@
 
 #include "settings.h"
 #include "mainPage.h"
+#include "clock.h"
 
 #define SETUP_PIN 3
 

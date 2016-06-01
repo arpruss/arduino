@@ -1,3 +1,4 @@
+#include "clock.h"
 
 unsigned int localPort = 4097;
 const int NTP_PACKET_SIZE = 48;
