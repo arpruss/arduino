@@ -26,7 +26,10 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>. */
 #define EEPROM_PSK_OFFSET EEPROM_SSID_OFFSET + EEPROM_SSID_LENGTH
 #define EEPROM_PSK_LENGTH 64
 #define EEPROM_TZ_OFFSET EEPROM_PSK_OFFSET + EEPROM_PSK_LENGTH
-#define EEPROM_TIMESERVER_OFFSET EEPROM_TZ_OFFSET + 1
+#define EEPROM_TZ_LENGTH 2
+#define EEPROM_USDST_OFFSET EEPROM_TZ_OFFSET + EEPROM_TZ_LENGTH
+#define EEPROM_USDST_LENGTH 1
+#define EEPROM_TIMESERVER_OFFSET EEPROM_USDST_OFFSET + EEPROM_USDST_LENGTH
 #define EEPROM_TIMESERVER_LENGTH 32
 #define EEPROM_INTERVAL_OFFSET EEPROM_TIMESERVER_OFFSET + EEPROM_TIMESERVER_LENGTH
 #define EEPROM_INTERVAL_LENGTH 2
@@ -35,6 +38,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>. */
 
 #define DEFAULT_TIMESERVER "time.nist.gov"
 #define MINIMUM_INTERVAL 60
+#define DEFAULT_INTERVAL (60*60)
 
 #define CLOCK_NAME "ESP-CLOCK"
 #define WIFI_AP_NAME CLOCK_NAME
@@ -71,7 +75,10 @@ class Settings {
         if (buffer[i]) psk += buffer[i];
       }
 
-      timezone = long(buffer[EEPROM_TZ_OFFSET]);
+      interval = int16_t(buffer[EEPROM_TZ_OFFSET]) << 8;
+      interval |= buffer[EEPROM_TZ_OFFSET+1];
+
+      usdst = buffer[EEPROM_USDST_OFFSET];
 
       strncpy(timeserver, &buffer[EEPROM_TIMESERVER_OFFSET], EEPROM_TIMESERVER_LENGTH);
       if (strlen(timeserver) < 1) {
@@ -80,6 +87,9 @@ class Settings {
 
       interval = time_t(buffer[EEPROM_INTERVAL_OFFSET]) << 8;
       interval |= buffer[EEPROM_INTERVAL_OFFSET+1];
+      if (interval < 0) {
+        interval = DEFAULT_INTERVAL;
+      }
       if (interval < MINIMUM_INTERVAL) {
         interval = MINIMUM_INTERVAL;
       }
@@ -121,7 +131,8 @@ class Settings {
 
     String ssid;
     String psk;
-    long timezone;
+    int16_t timezone;
+    char usdst;
     char timeserver[64];
     int interval;
     String name;

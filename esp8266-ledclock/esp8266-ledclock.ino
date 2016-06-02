@@ -15,6 +15,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>. */
 #include <Ticker.h>
 
 #include <Time.h>
+#include <TimeLib.h>
 #include <EEPROM.h>
 #include <ESP8266WiFiMulti.h>
 #include <WiFiUdp.h>
@@ -42,6 +43,7 @@ void handleRoot() {
   s.replace("@@SSID@@", settings.ssid);
   s.replace("@@PSK@@", settings.psk);
   s.replace("@@TZ@@", String(settings.timezone));
+  s.replace("@@USDST@@", String(settings.usdst));
   s.replace("@@HOUR@@", String(hour()));
   s.replace("@@MIN@@", String(minute()));
   s.replace("@@NTPSRV@@", settings.timeserver);
@@ -99,7 +101,6 @@ void setup() {
   server.on("/", handleRoot);
   server.on("/form", handleForm);
   server.begin();
-  setSkipSetupPin(0);
 }
 
 void loop() {

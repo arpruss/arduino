@@ -28,28 +28,34 @@ void setupTime() {
   setSyncProvider(getNtpTime);
   setSyncInterval(settings.interval);
 }
+  
 
 time_t getNtpTime()
 {
+  DebugLn("getNtpTime");
   WiFiUDP udp;
   udp.begin(localPort);
   while (udp.parsePacket() > 0) ; // discard any previously received packets
   for (int i = 0 ; i < 5 ; i++) { // 5 retries.
+    DebugLn("send packet");
     sendNTPpacket(&udp);
     uint32_t beginWait = millis();
     while (millis() - beginWait < 1500) {
       if (udp.parsePacket()) {
+         DebugLn("parse packet");
          udp.read(packetBuffer, NTP_PACKET_SIZE);
          // Extract seconds portion.
          unsigned long highWord = word(packetBuffer[40], packetBuffer[41]);
          unsigned long lowWord = word(packetBuffer[42], packetBuffer[43]);
          unsigned long secSince1900 = highWord << 16 | lowWord;
          udp.flush();
-         return secSince1900 - 2208988800UL + settings.timezone * SECS_PER_HOUR;
+         DebugLn(secSince1900 - 2208988800UL + settings.timezone * 60);
+         return secSince1900 - 2208988800UL + settings.timezone * 60;
       }
       delay(10);
     }
   }
+  DebugLn("failed");
   return 0; // return 0 if unable to get the time
 }
 

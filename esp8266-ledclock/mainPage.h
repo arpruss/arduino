@@ -43,7 +43,8 @@ const char MAIN_page[] PROGMEM = R"=====(
 <tr><td colspan=2 class=heading>Time Setup</td></tr>
 <tr><td>NTP Server:</td><td><input type=text name="ntpsrv" value="@@NTPSRV@@"></td></tr>
 <tr><td>Sync Interval:</td><td><input type=text name="ntpint" value="@@NTPINT@@">s</td></tr>
-<tr><td>Timezone:</td><td><input type=text name="timezone" value="@@TZ@@">h</td></tr>
+<tr><td>Timezone:</td><td><input type=text name="timezone" value="@@TZ@@">min</td></tr>
+<tr><td>US Daylight Savings Adjust:</td><td><input type=checkbox name="usdst" value=@@USDST@@></td></tr>
 </table>
 <p/>
 <input type="submit" value="Update">
