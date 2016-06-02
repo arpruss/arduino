@@ -32,6 +32,7 @@ void displayClock(void);
 void setupTime(void);
 void displayBusy(void);
 void setSkipSetupPin(char value);
+uint8_t adjustedHour(time_t t);
 
 #ifndef DEBUG
 extern const char leds[] = { 16, 5, 4, 2, 14, 12, 13, 15, 3, 1 };

@@ -108,12 +108,19 @@ void _displayIP() {
 // end Ip display handler.
 
 void displayClock() {
-  int h = hour() % 12;
-  int m = minute();
+  if (timeStatus() != timeSet) {
+    value = 0x303;
+  }
+  else {
+    time_t n = now();
+    int h = adjustedHour(n) % 12;
+    if (h == 0)
+      h = 12;
+    int m = minute(n);
 
-  value = (h << 6) | m;
+    value = (h << 6) | m;
+  }
 
-  if (timeStatus() != timeSet) value = 0x303;
   
   display();
 }

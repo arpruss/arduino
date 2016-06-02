@@ -62,10 +62,10 @@ time_t getNtpTime()
 
 // adjust hour for DST if needed
 // US+Canada only
-uint8_t adjustedHour() {
+// Political message: Let's abolish DST, or move to DST all year round!
+uint8_t adjustedHour(time_t t) {
   if (!settings.usdst)
-    return hour();
-  time_t t = now(); // seconds since Jan 1, 1970
+    return hour(t);
   uint8_t m = month(t);
   uint8_t h = hour(t);
   char dst = 0;
