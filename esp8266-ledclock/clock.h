@@ -42,8 +42,8 @@ extern const char leds[] = { 16, 5, 4, 2, 14, 12, 13, 15, 3, 1 };
 #else
 extern const char leds[] = { 16, 5, 4, 2, 14, 12, 13, 15 };
 #define DebugStart() Serial.begin(115200)
-#define DebugLn(s) Serial.println(s)
-#define Debug(s) Serial.print(s)
+#define DebugLn(s) Serial.println((s))
+#define Debug(s) Serial.print((s))
 #endif
 
 #define NUM_LEDS  (sizeof leds / sizeof *leds)

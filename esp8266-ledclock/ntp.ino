@@ -49,14 +49,69 @@ time_t getNtpTime()
          unsigned long lowWord = word(packetBuffer[42], packetBuffer[43]);
          unsigned long secSince1900 = highWord << 16 | lowWord;
          udp.flush();
-         DebugLn(secSince1900 - 2208988800UL + settings.timezone * 60);
-         return secSince1900 - 2208988800UL + settings.timezone * 60;
+         time_t standardTime = secSince1900 - 2208988800UL + settings.timezone * 60;
+         DebugLn("NTP standard time "+String(standardTime));
+         return standardTime;
       }
       delay(10);
     }
   }
   DebugLn("failed");
   return 0; // return 0 if unable to get the time
+}
+
+// adjust hour for DST if needed
+// US+Canada only
+uint8_t adjustedHour() {
+  if (!settings.usdst)
+    return hour();
+  time_t t = now(); // seconds since Jan 1, 1970
+  uint8_t m = month(t);
+  uint8_t h = hour(t);
+  char dst = 0;
+  if (m == 3) {
+    // check for March spring-forward
+    // spring forward at 3 am second Sunday in March
+    int8_t w = weekday(t);
+    int8_t d = day(t);
+    if (w == 0) {
+      // it's Sunday
+      if (d > 14) {
+        dst = 1; // three or more Sundays have passed
+      }
+      else if (d > 7) {
+        // it's that pesky second Sunday
+        
+        if (h >= 3)
+          dst = 1; // after 3 am ST
+      }
+    }
+    else if (d - w > 7) {
+      dst = 1; // two or more Sundays have passed
+    }
+  } else if (m == 11) {
+    // check for November fall-back
+    dst = 1;
+    int8_t w = weekday(t);
+    int8_t d = day(t);
+    if (w == 0) {
+      if (d > 7) {
+        dst = 0; // two or more Sundays have passed
+      }
+      else {
+        // that first Sunday
+        if (h >= 1)
+          dst = 0; // after 1 am ST
+      }
+    } else if (d - w >= 1) {
+      // it's after the first Sunday
+      dst = 0;
+    }
+  }
+  else if (3 < m && m < 11) {
+    dst = 1;
+  }
+  return dst ? (1+h)%24 : h;
 }
 
 void sendNTPpacket(WiFiUDP *u) {
