@@ -75,8 +75,8 @@ class Settings {
         if (buffer[i]) psk += buffer[i];
       }
 
-      interval = int16_t(buffer[EEPROM_TZ_OFFSET]) << 8;
-      interval |= buffer[EEPROM_TZ_OFFSET+1];
+      timezone = int16_t(buffer[EEPROM_TZ_OFFSET]) << 8;
+      timezone |= buffer[EEPROM_TZ_OFFSET+1];
 
       usdst = buffer[EEPROM_USDST_OFFSET];
 
@@ -112,7 +112,9 @@ class Settings {
       // Copy PSK to buffer.
       psk.getBytes(&buffer[EEPROM_PSK_OFFSET], EEPROM_PSK_LENGTH, 0);
       // Copy timezone.
-      buffer[EEPROM_TZ_OFFSET] = timezone;
+      buffer[EEPROM_TZ_OFFSET] = timezone >> 8;
+      buffer[EEPROM_TZ_OFFSET+1] = timezone & 0xFF;
+      buffer[EEPROM_USDST_OFFSET] = usdst;
       // Copy timeserver.
       strncpy((char *)&buffer[EEPROM_TIMESERVER_OFFSET], (char *)timeserver, EEPROM_TIMESERVER_LENGTH);
       // Copy interval.

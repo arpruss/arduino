@@ -13,31 +13,19 @@ You should have received a copy of the GNU General Public License
 along with this program.  If not, see <http://www.gnu.org/licenses/>. */
 
 static volatile unsigned int value = 0;
-static char skipSetupPin;
-
-void setSkipSetupPin(char v) {
-  skipSetupPin = v;  
-  if (! v) {
-    pinMode(SETUP_PIN, OUTPUT);
-    digitalWrite(SETUP_PIN, LOW);
-  }
-}
 
 void clear() {
   for (char i = 0 ; i < NUM_LEDS ; i++) {
-    if (!skipSetupPin || leds[i] != SETUP_PIN)
       digitalWrite(leds[i], LOW);
   }
 }
 
 void display() {
   for (int i = 0 ; i < NUM_LEDS ; i++) {
-    if (!skipSetupPin || leds[i] != SETUP_PIN) {
-      if (value & (1<<i))
-        digitalWrite(leds[i], HIGH);
-      else 
-        digitalWrite(leds[i], LOW);
-    }
+    if (value & (1<<i))
+      digitalWrite(leds[i], HIGH);
+    else 
+      digitalWrite(leds[i], LOW);
   }
 }
 
@@ -60,9 +48,11 @@ void clearDigits() {
 Ticker ticker;
 
 volatile unsigned int busyValue;
+volatile char busyInc;
 
 void displayBusy() {
-  busyValue = 2;
+  busyValue = 1;
+  busyInc = 1;
   ticker.attach(0.1, _displayBusy);
 }
 
@@ -77,9 +67,20 @@ void stopDisplayAP() {
 }
 
 void _displayBusy() {
-  busyValue = (busyValue << 1) & 0x3FF;
-  if (busyValue == 0)
+  if (busyInc) {
+    busyValue = (busyValue << 1) & 0x3FF;
+    if (busyValue == 0) {
+      busyValue = 0x100;
+      busyInc = 0;
+    }
+  }
+  else {
+    busyValue >>= 1;
+    if (busyValue == 0) {
       busyValue = 2;
+      busyInc = 1;
+    }
+  }
   value = busyValue;
   display();
 }
@@ -127,8 +128,7 @@ void displayClock() {
 
 void setupDisplay() {
   for (char i=0; i < NUM_LEDS; i++)
-    if (!skipSetupPin || leds[i] != SETUP_PIN)
-      pinMode(leds[i], OUTPUT);
+     pinMode(leds[i], OUTPUT);
   displayDash();
 }
 

@@ -15,7 +15,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>. */
 #ifndef _CLOCK_H
 #define _CLOCK_H
 
-#undef  DEBUG
+#undef DEBUG
 
 void setupWiFi(void);
 void setupSTA(void);
@@ -31,7 +31,6 @@ void stopDisplayBusy(void);
 void displayClock(void);
 void setupTime(void);
 void displayBusy(void);
-void setSkipSetupPin(char value);
 uint8_t adjustedHour(time_t t);
 
 #ifndef DEBUG

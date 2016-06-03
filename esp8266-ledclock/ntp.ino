@@ -42,7 +42,6 @@ time_t getNtpTime()
     uint32_t beginWait = millis();
     while (millis() - beginWait < 1500) {
       if (udp.parsePacket()) {
-         DebugLn("parse packet");
          udp.read(packetBuffer, NTP_PACKET_SIZE);
          // Extract seconds portion.
          unsigned long highWord = word(packetBuffer[40], packetBuffer[41]);
@@ -50,7 +49,6 @@ time_t getNtpTime()
          unsigned long secSince1900 = highWord << 16 | lowWord;
          udp.flush();
          time_t standardTime = secSince1900 - 2208988800UL + settings.timezone * 60;
-         DebugLn("NTP standard time "+String(standardTime));
          return standardTime;
       }
       delay(10);

@@ -43,7 +43,7 @@ void handleRoot() {
   s.replace("@@SSID@@", settings.ssid);
   s.replace("@@PSK@@", settings.psk);
   s.replace("@@TZ@@", String(settings.timezone));
-  s.replace("@@USDST@@", String(settings.usdst));
+  s.replace("@@USDST@@", settings.usdst?"checked":"");
   s.replace("@@HOUR@@", String(hour()));
   s.replace("@@MIN@@", String(minute()));
   s.replace("@@NTPSRV@@", settings.timeserver);
@@ -70,6 +70,10 @@ void handleForm() {
   if (tz.length()) {
     settings.timezone = tz.toInt();
   }
+
+  String usdst = server.arg("usdst");
+  DebugLn("usdst="+usdst);
+  settings.usdst = (usdst == "1");
   
   time_t newTime = getNtpTime();
   if (newTime) {
@@ -114,17 +118,15 @@ void loop() {
 }
 
 void setupWiFi() {
-  setSkipSetupPin(1);
   pinMode(SETUP_PIN, INPUT);
   digitalWrite(SETUP_PIN, LOW);
   settings.Load();
   // Wait up to 5s for SETUP_PIN to go low to enter AP/setup mode.
   displayBusy();
-  while (millis() < 5000) {
+  while (millis() < 7000) {
     if (!digitalRead(SETUP_PIN) || !settings.ssid.length()) {
       DebugLn("Setting up AP");
       stopDisplayBusy();
-      setSkipSetupPin(0);
       setupAP();
       DebugLn("Done with AP");
       return;
@@ -133,7 +135,6 @@ void setupWiFi() {
   }
   stopDisplayBusy();
   setupSTA();
-  setSkipSetupPin(0);
 }
 
 void setupSTA()
