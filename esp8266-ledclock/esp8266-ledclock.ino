@@ -36,9 +36,9 @@ ESP8266WebServer server (80);
 String httpUpdateResponse;
 
 time_t prevDisplay = 0;
-char apMode = 0;
 
 void handleRoot() {
+  DebugLn("handleRoot");
   String s = MAIN_page;
   s.replace("@@SSID@@", settings.ssid);
   s.replace("@@PSK@@", settings.psk);
@@ -56,6 +56,8 @@ void handleRoot() {
 }
 
 void handleForm() {
+  DebugLn("handleForm");
+  DebugLn("mode "+String(WiFi.status()));
   String update_wifi = server.arg("update_wifi");
   String t_ssid = server.arg("ssid");
   String t_psk = server.arg("psk");
@@ -72,9 +74,8 @@ void handleForm() {
   }
 
   String usdst = server.arg("usdst");
-  DebugLn("usdst="+usdst);
   settings.usdst = (usdst == "1");
-  
+
   time_t newTime = getNtpTime();
   if (newTime) {
     setTime(newTime);
@@ -93,14 +94,14 @@ void handleForm() {
   settings.Save();
   if (update_wifi == "1") {
     delay(500);
-    setupWiFi();
+    setupWiFi(0);
   }
 }
 
 void setup() {
   DebugStart();
   setupDisplay();
-  setupWiFi();
+  setupWiFi(1);
   setupTime();
   server.on("/", handleRoot);
   server.on("/form", handleForm);
@@ -109,7 +110,7 @@ void setup() {
 
 void loop() {
   server.handleClient();
-  if (timeStatus() != timeNotSet && ! apMode) {
+  if (timeStatus() != timeNotSet) {
     if (now() != prevDisplay) { //update the display only if time has changed
       prevDisplay = now();
       displayClock();
@@ -117,23 +118,27 @@ void loop() {
   }
 }
 
-void setupWiFi() {
-  pinMode(SETUP_PIN, INPUT);
-  digitalWrite(SETUP_PIN, LOW);
+void setupWiFi(char checkAPMode) {
   settings.Load();
-  // Wait up to 5s for SETUP_PIN to go low to enter AP/setup mode.
-  displayBusy();
-  while (millis() < 7000) {
-    if (!digitalRead(SETUP_PIN) || !settings.ssid.length()) {
-      DebugLn("Setting up AP");
-      stopDisplayBusy();
-      setupAP();
-      DebugLn("Done with AP");
-      return;
+  if (checkAPMode) {
+    // Wait up to 5s for SETUP_PIN to go low to enter AP/setup mode.
+    pinMode(SETUP_PIN, INPUT);
+    digitalWrite(SETUP_PIN, LOW);
+    displayBusy();
+    long start = millis();
+    DebugLn("Started at "+String(start));
+    while (millis() < start + 5000) {
+      if (!digitalRead(SETUP_PIN) || !settings.ssid.length()) {
+        DebugLn("Setting up AP");
+        stopDisplayBusy();
+        setupAP();
+        DebugLn("Done with AP");
+        return;
+      }
+      delay(50);
     }
-    delay(50);
+    stopDisplayBusy();
   }
-  stopDisplayBusy();
   setupSTA();
 }
 
@@ -141,10 +146,12 @@ void setupSTA()
 {
   char ssid[32];
   char psk[64];
+
   memset(ssid, 0, 32);
   memset(psk, 0, 64);
   displayBusy();
 
+  WiFi.disconnect();
   WiFi.mode(WIFI_STA);
   settings.ssid.toCharArray(ssid, 32);
   settings.psk.toCharArray(psk, 64);
@@ -154,16 +161,20 @@ void setupSTA()
     WiFi.begin(ssid);
   }
   
+  DebugLn("Connecting to "+String(ssid));
   while (WiFi.status() != WL_CONNECTED) {
     delay(100);
+    Debug(String(WiFi.status()));
   }
+  DebugLn("Connected");
+  
   stopDisplayBusy();
   displayDash();
+  ntpActive = 1;
 }
 
 void setupAP() {
-  apMode = 1;
-  WiFi.mode(WIFI_AP);
+  WiFi.mode(WIFI_AP_STA);
   WiFi.softAP(WIFI_AP_NAME);
   displayIP();
 }

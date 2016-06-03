@@ -32,6 +32,8 @@ void setupTime() {
 
 time_t getNtpTime()
 {
+  if (!ntpActive)
+    return 0;
   DebugLn("getNtpTime");
   WiFiUDP udp;
   udp.begin(localPort);

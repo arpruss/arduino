@@ -51,12 +51,14 @@ volatile unsigned int busyValue;
 volatile char busyInc;
 
 void displayBusy() {
+  DebugLn("displayBusy");
   busyValue = 1;
   busyInc = 1;
   ticker.attach(0.1, _displayBusy);
 }
 
 void stopDisplayBusy() {
+  DebugLn("stopDisplayBusy");
   ticker.detach();
   clear();
 }
@@ -121,7 +123,6 @@ void displayClock() {
 
     value = (h << 6) | m;
   }
-
   
   display();
 }

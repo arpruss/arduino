@@ -17,7 +17,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>. */
 
 #undef DEBUG
 
-void setupWiFi(void);
+void setupWiFi(char checkAPMode);
 void setupSTA(void);
 void setupDisplay(void);
 void setupAP(void);
@@ -32,6 +32,7 @@ void displayClock(void);
 void setupTime(void);
 void displayBusy(void);
 uint8_t adjustedHour(time_t t);
+extern char ntpActive = 0;
 
 #ifndef DEBUG
 extern const char leds[] = { 16, 5, 4, 2, 14, 12, 13, 15, 3, 1 };
