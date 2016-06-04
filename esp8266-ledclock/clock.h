@@ -17,21 +17,29 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>. */
 
 #undef DEBUG
 
+#define MODE_CLOCK    1
+#define MODE_LEDS     2
+#define FOREVER -1
+
+void setMode(char mode);
+void animate(char returnToClock, float delayTime, int repeatCount, int count, uint16_t* values);
 void setupWiFi(char checkAPMode);
 void setupSTA(void);
 void setupDisplay(void);
 void setupAP(void);
 time_t getNtpTime(void);
 void sendNTPpacket(WiFiUDP *u);
-void _displayBusy(void);
 void _displayIP(void);
 void displayIP(void);
-void displayDash(void);
-void stopDisplayBusy(void);
 void displayClock(void);
+void clearDisplay(void);
+void stopAnimation(void);
 void setupTime(void);
 void displayBusy(void);
+void displayAPWait(void);
 uint8_t adjustedHour(time_t t);
+uint16_t getDisplayRaw(void);
+void displayRaw(uint16_t v);
 extern char ntpActive = 0;
 
 #ifndef DEBUG

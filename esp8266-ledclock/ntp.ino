@@ -64,7 +64,7 @@ time_t getNtpTime()
 // US+Canada only
 // Political message: Let's abolish DST, or move to DST all year round!
 uint8_t adjustedHour(time_t t) {
-  if (!settings.usdst)
+  if (!settings.usdst || t == 0)
     return hour(t);
   uint8_t m = month(t);
   uint8_t h = hour(t);

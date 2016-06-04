@@ -23,36 +23,155 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>. */
 #include <WiFiServer.h>
 #include <WiFiClient.h>
 #include <ESP8266WebServer.h>
+#include <stdlib.h>
 
 #include "settings.h"
 #include "mainPage.h"
 #include "clock.h"
 
-#define MODE_SETUP 0
-#define MODE_CLOCK 1
+//#define MODE_SETUP    0
 
 ESP8266WebServer server (80);
 
+char mode = MODE_CLOCK;
 String httpUpdateResponse;
 
 time_t prevDisplay = 0;
 
+void setMode(int newMode) {
+  mode = newMode;
+}
+
+String getMode() {
+  if (mode == MODE_CLOCK)
+    return "clock";
+  else
+    return "LEDs";
+}
+
+uint16_t parseNumber(char* number) {
+  if (number[0] == '0' && (number[1] == 'x' || number[1] == 'X')) {
+    return (uint16_t)strtoul(number, NULL, 16);
+  }
+  else {
+    return atoi(number);
+  }
+}
+
+char handleAnimation(char* in) {
+  char* p = in;
+  int argCount = 1;
+  while (*p) 
+    if (*p == ',') {
+      argCount++;
+      *p = 0;
+    }
+  if (argCount < 4)
+    return 0;
+  char returnToClock = atoi(in);  
+  in += strlen(in) + 1;
+  argCount--;
+  float delayTime = atof(in);
+  if (delayTime == 0)
+    return 0;
+  in += strlen(in) + 1;
+  argCount--;
+  int repeat = atoi(in);
+  in += strlen(in) + 1;
+  argCount--;
+  uint16_t data[argCount];
+  for (int i = 0 ; i < argCount ; i++) {
+    data[i] = parseNumber(in);
+    in += strlen(in) + 1;
+  }
+  animate(returnToClock, delayTime, repeat, argCount, data);
+  return 1;
+}
+
+void handleLEDs() {
+  String value = server.arg("value");
+  int valueLen = value.length();
+  char caValue[valueLen+1];
+  value.toCharArray(caValue,valueLen+1);
+  String op = server.arg("op");
+  String status = "";
+  static const String success = String("\nSuccess\n");
+  if (op == "clock") {
+    mode = MODE_CLOCK;
+    clearDisplay();
+    status = success;
+  }
+  else if (op == "set") {
+    mode = MODE_LEDS;
+    displayRaw(parseNumber(caValue));
+    status = success;
+  }
+  else if (op == "or") {
+    displayRaw(getDisplayRaw() | parseNumber(caValue));
+    status = success;
+  }
+  else if (op == "andnot") {
+    displayRaw(getDisplayRaw() & ~parseNumber(caValue));
+    status = success;
+  }
+  else if (op == "animate") {
+    if (handleAnimation(caValue))
+      status = success;
+  }
+  server.send(200, "text/plain", 
+    String("mode: ")+
+    String((mode==MODE_CLOCK)?"clock":"led")+
+    String("\nleds: ")+
+    String(getDisplayRaw())+
+    success);
+}
+
 void handleRoot() {
   DebugLn("handleRoot");
   String s = MAIN_page;
+  time_t t = now();
   s.replace("@@SSID@@", settings.ssid);
   s.replace("@@PSK@@", settings.psk);
   s.replace("@@TZ@@", String(settings.timezone));
   s.replace("@@USDST@@", settings.usdst?"checked":"");
-  s.replace("@@HOUR@@", String(hour()));
-  s.replace("@@MIN@@", String(minute()));
+  s.replace("@@HOUR@@", String(adjustedHour(t)));
+  s.replace("@@MIN@@", String(minute(t)));
   s.replace("@@NTPSRV@@", settings.timeserver);
   s.replace("@@NTPINT@@", String(settings.interval));
   s.replace("@@SYNCSTATUS@@", timeStatus() == timeSet ? "OK" : "Overdue");
   s.replace("@@CLOCKNAME@@", settings.name);
   s.replace("@@UPDATERESPONSE@@", httpUpdateResponse);
+  s.replace("@@MODE@@", getMode());
   httpUpdateResponse = "";
   server.send(200, "text/html", s);
+}
+
+void handleLED() {
+  String value = server.arg("value");
+  String op = server.arg("op");
+  char success = 0;
+  if (op == "clock") {
+    mode = MODE_CLOCK;
+    clearDisplay();
+    success = 1;
+  }
+  else if (op == "set") {
+    mode = MODE_LEDS;
+    displayRaw(value.toInt());
+    success = 1;
+  }
+  else if (op == "or") {
+    displayRaw(getDisplayRaw() | value.toInt());
+    success = 1;
+  }
+  else if (op == "andnot") {
+    displayRaw(getDisplayRaw() & ~value.toInt());
+    success = 1;
+  }
+  server.send(200, "text/plain", String("mode: ")+
+    getMode()+
+    String("\nleds: ")+String(getDisplayRaw())+
+    String(success ? "\n\nSuccess!\n" : "\n" ) );
 }
 
 void handleForm() {
@@ -105,16 +224,37 @@ void setup() {
   setupTime();
   server.on("/", handleRoot);
   server.on("/form", handleForm);
+  server.on("/led", handleLED);
   server.begin();
 }
 
 void loop() {
+  static unsigned long lastSetupPin = 0;
   server.handleClient();
-  if (timeStatus() != timeNotSet) {
-    if (now() != prevDisplay) { //update the display only if time has changed
-      prevDisplay = now();
-      displayClock();
+  if (!digitalRead(SETUP_PIN)) {
+    if (lastSetupPin + 1000 < millis()) {
+      uint16_t data[5];
+      IPAddress addr = WiFi.localIP();
+      data[0] = (1 << 8)|(addr & 0xff);
+      data[1] = (2 << 8)|((addr>>8) & 0xff);
+      data[2] = (3 << 8)|((addr>>16) & 0xff);
+      data[3] = (4 << 8)|((addr>>24) & 0xff);
+      data[4] = 0;
+      mode = MODE_LEDS;
+      animate(1, 6.0, 1, 5, data);
     }
+    lastSetupPin = millis();
+  }
+  if (mode == MODE_CLOCK) {
+    if (timeStatus() != timeNotSet) {
+      if (now() != prevDisplay) { //update the display only if time has changed
+        prevDisplay = now();
+        displayClock();
+      }
+    }
+  }
+  else {
+    prevDisplay = -1;
   }
 }
 
@@ -124,20 +264,20 @@ void setupWiFi(char checkAPMode) {
     // Wait up to 5s for SETUP_PIN to go low to enter AP/setup mode.
     pinMode(SETUP_PIN, INPUT);
     digitalWrite(SETUP_PIN, LOW);
-    displayBusy();
+    displayAPWait();
     long start = millis();
     DebugLn("Started at "+String(start));
     while (millis() < start + 5000) {
       if (!digitalRead(SETUP_PIN) || !settings.ssid.length()) {
         DebugLn("Setting up AP");
-        stopDisplayBusy();
+        stopAnimation();
         setupAP();
         DebugLn("Done with AP");
         return;
       }
       delay(50);
     }
-    stopDisplayBusy();
+    stopAnimation();
   }
   setupSTA();
 }
@@ -168,8 +308,7 @@ void setupSTA()
   }
   DebugLn("Connected");
   
-  stopDisplayBusy();
-  displayDash();
+  stopAnimation();
   ntpActive = 1;
 }
 
