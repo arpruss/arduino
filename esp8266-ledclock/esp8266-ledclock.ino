@@ -40,6 +40,7 @@ time_t prevDisplay = 0;
 
 void setMode(int newMode) {
   mode = newMode;
+  prevDisplay = 0;
 }
 
 String getMode() {
@@ -53,19 +54,25 @@ uint16_t parseNumber(char* number) {
   if (number[0] == '0' && (number[1] == 'x' || number[1] == 'X')) {
     return (uint16_t)strtoul(number, NULL, 16);
   }
+  else if (number[0] == '0' && (number[1] == 'b' || number[1] == 'B')) {
+    return (uint16_t)strtoul(number, NULL, 2);
+  }
   else {
     return atoi(number);
   }
 }
 
 char handleAnimation(char* in) {
+  DebugLn("Animate "+String(in));
   char* p = in;
   int argCount = 1;
-  while (*p) 
-    if (*p == ',') {
+  while (*p) {
+    if (*p == ':') {
       argCount++;
       *p = 0;
     }
+    p++;
+  }
   if (argCount < 4)
     return 0;
   char returnToClock = atoi(in);  
@@ -79,51 +86,67 @@ char handleAnimation(char* in) {
   int repeat = atoi(in);
   in += strlen(in) + 1;
   argCount--;
+
+  if (argCount > MAX_ANIMATE_COUNT)
+    argCount = MAX_ANIMATE_COUNT;
+  
   uint16_t data[argCount];
   for (int i = 0 ; i < argCount ; i++) {
     data[i] = parseNumber(in);
+    DebugLn(String(data[i]));
     in += strlen(in) + 1;
   }
   animate(returnToClock, delayTime, repeat, argCount, data);
   return 1;
 }
 
-void handleLEDs() {
+void handleIO() {
+  DebugLn("handleIO");
+
   String value = server.arg("value");
   int valueLen = value.length();
   char caValue[valueLen+1];
   value.toCharArray(caValue,valueLen+1);
   String op = server.arg("op");
   String status = "";
-  static const String success = String("\nSuccess\n");
+  String success = String("\nresult: success with ")+op+String("\n");
+
+  DebugLn("operation "+op);
+
   if (op == "clock") {
-    mode = MODE_CLOCK;
+    setMode(MODE_CLOCK);
     clearDisplay();
     status = success;
   }
   else if (op == "set") {
-    mode = MODE_LEDS;
+    setMode(MODE_LEDS);
     displayRaw(parseNumber(caValue));
     status = success;
   }
   else if (op == "or") {
+    setMode(MODE_LEDS);
     displayRaw(getDisplayRaw() | parseNumber(caValue));
     status = success;
   }
   else if (op == "andnot") {
+    setMode(MODE_LEDS);
     displayRaw(getDisplayRaw() & ~parseNumber(caValue));
     status = success;
   }
   else if (op == "animate") {
+    setMode(MODE_LEDS);
     if (handleAnimation(caValue))
       status = success;
   }
+  
   server.send(200, "text/plain", 
     String("mode: ")+
-    String((mode==MODE_CLOCK)?"clock":"led")+
+    String(getMode())+
     String("\nleds: ")+
     String(getDisplayRaw())+
-    success);
+    String("\nbutton: ")+
+    String(!digitalRead(SETUP_PIN))+
+    status);
 }
 
 void handleRoot() {
@@ -144,34 +167,6 @@ void handleRoot() {
   s.replace("@@MODE@@", getMode());
   httpUpdateResponse = "";
   server.send(200, "text/html", s);
-}
-
-void handleLED() {
-  String value = server.arg("value");
-  String op = server.arg("op");
-  char success = 0;
-  if (op == "clock") {
-    mode = MODE_CLOCK;
-    clearDisplay();
-    success = 1;
-  }
-  else if (op == "set") {
-    mode = MODE_LEDS;
-    displayRaw(value.toInt());
-    success = 1;
-  }
-  else if (op == "or") {
-    displayRaw(getDisplayRaw() | value.toInt());
-    success = 1;
-  }
-  else if (op == "andnot") {
-    displayRaw(getDisplayRaw() & ~value.toInt());
-    success = 1;
-  }
-  server.send(200, "text/plain", String("mode: ")+
-    getMode()+
-    String("\nleds: ")+String(getDisplayRaw())+
-    String(success ? "\n\nSuccess!\n" : "\n" ) );
 }
 
 void handleForm() {
@@ -224,32 +219,45 @@ void setup() {
   setupTime();
   server.on("/", handleRoot);
   server.on("/form", handleForm);
-  server.on("/led", handleLED);
+  server.on("/io", handleIO);
   server.begin();
 }
 
 void loop() {
   static unsigned long lastSetupPin = 0;
   server.handleClient();
-  if (!digitalRead(SETUP_PIN)) {
-    if (lastSetupPin + 1000 < millis()) {
-      uint16_t data[5];
-      IPAddress addr = WiFi.localIP();
-      data[0] = (1 << 8)|(addr & 0xff);
-      data[1] = (2 << 8)|((addr>>8) & 0xff);
-      data[2] = (3 << 8)|((addr>>16) & 0xff);
-      data[3] = (4 << 8)|((addr>>24) & 0xff);
-      data[4] = 0;
-      mode = MODE_LEDS;
-      animate(1, 6.0, 1, 5, data);
-    }
-    lastSetupPin = millis();
-  }
   if (mode == MODE_CLOCK) {
+    if (!digitalRead(SETUP_PIN)) {
+      if (lastSetupPin + 1000 <= millis()) {
+        lastSetupPin = millis();
+        uint16_t data[5];
+        IPAddress addr = WiFi.localIP();
+        data[0] = 0;
+        data[1] = (0 << 8)|(addr & 0xff);
+        data[2] = (0 << 8)|(addr & 0xff);
+        data[3] = (0 << 8)|(addr & 0xff);
+        data[4] = (1 << 8)|((addr>>8) & 0xff);
+        data[5] = (1 << 8)|((addr>>8) & 0xff);
+        data[6] = (1 << 8)|((addr>>8) & 0xff);
+        data[7] = (2 << 8)|((addr>>16) & 0xff);
+        data[8] = (2 << 8)|((addr>>16) & 0xff);
+        data[9] = (2 << 8)|((addr>>16) & 0xff);
+        data[10] = (3 << 8)|((addr>>24) & 0xff);
+        data[11] = (3 << 8)|((addr>>24) & 0xff);
+        data[12] = (3 << 8)|((addr>>24) & 0xff);
+        data[13] = 0;
+        setMode(MODE_LEDS);
+        animate(1, 2.0, 1, 14, data);
+      }
+      else {
+        lastSetupPin = millis();
+      }
+    }
     if (timeStatus() != timeNotSet) {
-      if (now() != prevDisplay) { //update the display only if time has changed
-        prevDisplay = now();
-        displayClock();
+      time_t t = now();
+      if (t != prevDisplay) { //update the display only if time has changed
+        prevDisplay = t;
+        displayClock(t);
       }
     }
   }

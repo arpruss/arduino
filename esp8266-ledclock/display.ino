@@ -25,9 +25,9 @@ static uint16_t apWaitAnimation[] = {
 // Twirler handler.
 static Ticker ticker;
 
-static volatile char animateRepeat;
+static volatile int animateRepeat;
 static volatile int animateCount;
-static volatile uint16_t* animateValues;
+static volatile uint16_t animateValues[MAX_ANIMATE_COUNT];
 static volatile int animatePos;
 static volatile char animateReturnToClock;
 
@@ -41,6 +41,7 @@ void _display() {
 }
 
 void displayStatic() {
+  DebugLn("displayStatic");
   ticker.detach();
   _display();
 }
@@ -65,15 +66,17 @@ uint16_t getDisplayRaw() {
 }
 
 void _animate(void) {
+  DebugLn("_animate");
   if (animatePos >= animateCount) {
     
-    if (animateRepeat != FOREVER)
+    if (animateRepeat >= 0)
       animateRepeat--;
 
     if (animateRepeat != 0) {
       animatePos = 0;
     }
     else {
+      DebugLn("Detach "+String(animateRepeat));
       ticker.detach();
       if (animateReturnToClock)
         setMode(MODE_CLOCK);
@@ -81,20 +84,32 @@ void _animate(void) {
     }
   }
   value = animateValues[animatePos];
+  DebugLn("Animate "+String(animatePos)+" "+String(value)+" "+String(animateCount)+" "+String(animateRepeat));
   _display();
   animatePos++;
 }
 
 void animate(char returnToClock, float delayTime, int repeatCount, int count, uint16_t* values) {
   animateRepeat = repeatCount;
+  if (count > MAX_ANIMATE_COUNT)
+    count = MAX_ANIMATE_COUNT;
+  for (int i = 0 ; i < count ; i++)
+    animateValues[i] = values[i];
   animateCount = count;
-  animateValues = values;
   animateReturnToClock = returnToClock;
   animatePos = 0;
+
+  DebugLn("animate start");
+  DebugLn(String((int)returnToClock));
+  DebugLn(String(delayTime));
+  DebugLn(String((int)animateRepeat));
+  DebugLn(String((int)animateCount));
+
   ticker.attach(delayTime, _animate);
 }
 
 void stopAnimation(void) {
+  DebugLn("manual animation stop");
   ticker.detach();
   clearDisplay();
 }
@@ -105,11 +120,6 @@ void displayAPWait(void) {
 
 void displayBusy(void) {
   animate(0, 0.1, FOREVER, sizeof(busyAnimation)/sizeof(*busyAnimation), busyAnimation);
-}
-
-void clearAnimation() {
-  ticker.detach();
-  clearDisplay();
 }
 
 // IP Display handler.
@@ -131,16 +141,15 @@ void _displayIP() {
   _display();
 }
 
-void displayClock() {
+void displayClock(time_t t) {
   if (timeStatus() != timeSet) {
     value = 0x3FF;
   }
   else {
-    time_t n = now();
-    int h = adjustedHour(n) % 12;
+    int h = adjustedHour(t) % 12;
     if (h == 0)
       h = 12;
-    int m = minute(n);
+    int m = minute(t);
 
     value = (h << 6) | m;
   }

@@ -21,6 +21,8 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>. */
 #define MODE_LEDS     2
 #define FOREVER -1
 
+#define MAX_ANIMATE_COUNT 32
+
 void setMode(char mode);
 void animate(char returnToClock, float delayTime, int repeatCount, int count, uint16_t* values);
 void setupWiFi(char checkAPMode);
@@ -31,7 +33,7 @@ time_t getNtpTime(void);
 void sendNTPpacket(WiFiUDP *u);
 void _displayIP(void);
 void displayIP(void);
-void displayClock(void);
+void displayClock(time_t t);
 void clearDisplay(void);
 void stopAnimation(void);
 void setupTime(void);
