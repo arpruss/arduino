@@ -4,8 +4,12 @@ This is designed for NodeMCU v2/v3 which is based on an ESP8266-12E.
 The only other thing you need to buy are 10 LEDs and 10 resistors.
 
 Connect an LED with an appropriate current-limiting resistor to 
-GPIOs 1, 3, 15, 13, 12, 14, 2, 4, 5, 16. The first four are the hours
-and the last six are the minutes.
+GPIOs 1, 3, 15, 13, 12, 14, 2, 4, 5, 16, with the flat side of the LED
+to the pin. The first four are the hours and the last six are the minutes.
+
+This lets the pins sink the current; the ESP8266 can handle
+more sink than source current; if you prefer to source the current, 
+comment out #define CONNECTION_SINK in clock.h.
 
 For configuration, you need a button hooked up to GPIO 0, pressed = low.
 (The NodeMCU v3 has that button labeled "Flash".)

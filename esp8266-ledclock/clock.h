@@ -16,6 +16,15 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>. */
 #define _CLOCK_H
 
 #undef DEBUG
+#define CONNECTION_SINK
+
+#ifdef CONNECTION_SINK
+# define LED_ON LOW
+# define LED_OFF HIGH
+#else
+# define LED_ON HIGH
+# define LED_OFF LOW
+#endif
 
 #define MODE_CLOCK    1
 #define MODE_LEDS     2
