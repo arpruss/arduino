@@ -31,6 +31,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>. */
 #define FOREVER -1
 
 #define MAX_ANIMATE_COUNT 32
+#define MAX_TONES 256
 
 void setMode(char mode);
 void animate(char returnToClock, float delayTime, int repeatCount, int count, uint16_t* values);
@@ -52,6 +53,7 @@ uint8_t adjustedHour(time_t t);
 uint16_t getDisplayRaw(void);
 void displayRaw(uint16_t v);
 extern char ntpActive = 0;
+char play(char* data);
 
 #ifndef DEBUG
 extern const char leds[] = { 16, 5, 4, 2, 14, 12, 13, 15, 3, 1 };
@@ -68,6 +70,7 @@ extern const char leds[] = { 16, 5, 4, 2, 14, 12, 13, 15 };
 
 #define NUM_LEDS  (sizeof leds / sizeof *leds)
 #define SETUP_PIN 0
+#define TONE_PIN 0
 
 #endif
 

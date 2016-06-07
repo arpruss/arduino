@@ -138,6 +138,9 @@ void handleIO() {
     if (handleAnimation(caValue))
       status = success;
   }
+  else if (op == "tone") {
+    status = success;
+  }
   
   server.send(200, "text/plain", 
     String("mode: ")+
@@ -147,6 +150,10 @@ void handleIO() {
     String("\nbutton: ")+
     String(!digitalRead(SETUP_PIN))+
     status);
+
+  if (op == "tone") {
+    play(caValue);
+  }
 }
 
 void handleRoot() {
