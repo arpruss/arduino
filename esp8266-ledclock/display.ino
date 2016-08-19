@@ -142,7 +142,7 @@ void _displayIP() {
 }
 
 void displayClock(time_t t) {
-  if (timeStatus() != timeSet) {
+  if (timeStatus() == timeNotSet) {
     value = 0x3FF;
   }
   else {

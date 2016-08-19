@@ -29,8 +29,6 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>. */
 #include "mainPage.h"
 #include "clock.h"
 
-//#define MODE_SETUP    0
-
 ESP8266WebServer server (80);
 
 char mode = MODE_CLOCK;
@@ -38,7 +36,8 @@ String httpUpdateResponse;
 
 time_t prevDisplay = 0;
 
-void setMode(int newMode) {
+void setMode(char newMode) {
+  DebugLn("request set mode to "+String((int)newMode));
   mode = newMode;
   prevDisplay = 0;
 }
@@ -101,7 +100,7 @@ char handleAnimation(char* in) {
 }
 
 void handleIO() {
-  DebugLn("handleIO");
+  DebugLn("handleIO in mode "+String((int)mode));
 
   String value = server.arg("value");
   int valueLen = value.length();
@@ -145,7 +144,7 @@ void handleIO() {
   server.send(200, "text/plain", 
     String("mode: ")+
     String(getMode())+
-    String("\nleds: ")+
+    String("\nleds: "     )+
     String(getDisplayRaw())+
     String("\nbutton: ")+
     String(!digitalRead(SETUP_PIN))+
@@ -278,7 +277,7 @@ void setupWiFi(char checkAPMode) {
   if (checkAPMode) {
     // Wait up to 5s for SETUP_PIN to go low to enter AP/setup mode.
     pinMode(SETUP_PIN, INPUT);
-    digitalWrite(SETUP_PIN, LOW);
+    digitalWrite(SETUP_PIN, HIGH);
     displayAPWait();
     long start = millis();
     DebugLn("Started at "+String(start));

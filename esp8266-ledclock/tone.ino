@@ -48,5 +48,7 @@ char play(char *in) {
     }
   }
   noTone(TONE_PIN);
+  pinMode(SETUP_PIN, INPUT);
+  digitalWrite(SETUP_PIN, HIGH);
 }
 
