@@ -39,6 +39,14 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>. */
 #define DEFAULT_TIMESERVER "time.nist.gov"
 #define MINIMUM_INTERVAL 60
 #define DEFAULT_INTERVAL (60*60)
+#define DEFAULT_TIMEZONE 360
+
+#define SSID_LENGTH EEPROM_SSID_LENGTH
+#define PSK_LENGTH EEPROM_PSK_LENGTH
+
+//#include "c:/users/alexander/Documents/Arduino/private-default.h"
+char my_default_ssid[SSID_LENGTH] = "";
+char my_default_psk[PSK_LENGTH] = "";
 
 #define CLOCK_NAME "ESP-CLOCK"
 #define WIFI_AP_NAME CLOCK_NAME
@@ -62,6 +70,12 @@ class Settings {
         magic += buffer[i];
       }
       if (magic != EEPROM_MAGIC) {
+        interval = DEFAULT_INTERVAL;
+        timezone = 360;
+        strcpy(timeserver, DEFAULT_TIMESERVER);
+        usdst = 1;
+        ssid = String(my_default_ssid);
+        psk = String(my_default_psk);
         return;
       }
       // Read SSID
@@ -128,6 +142,7 @@ class Settings {
       for (int i = 0 ; i < EEPROM_WIFI_SIZE ; i++) {
         EEPROM.write(i, buffer[i]);
       }
+      EEPROM.commit();
       EEPROM.end();
     }
 

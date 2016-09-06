@@ -212,6 +212,7 @@ void handleForm() {
   server.send(302, "text/plain", "Moved");
 
   settings.Save();
+  
   if (update_wifi == "1") {
     delay(500);
     setupWiFi(0);
